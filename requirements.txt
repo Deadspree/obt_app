@@ -1,0 +1,6 @@
+opencv-python==4.10.0
+numpy==1.26.2
+ultralytics==8.1.47
+matplotlib==3.8.2
+streamlit==1.39.0
+sort-tracker-py==1.0.2

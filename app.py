@@ -4,8 +4,8 @@ from ultralytics import YOLO
 from sort_tracker import Sort  # Simple Online and Realtime Tracker
 from pathlib import Path
 import streamlit as st
-
-def tracking_streamlit(input_video_name, output_video_name, model_weight: str = "best.pt"):
+import matplotlib.pyplot as plt
+def tracking_streamlit(input_video_name: str, output_video_name: str, output_graph:str, model_weight: str = "best.pt"):
     """
     !Orange ball trajectory detection and save the output video
     """
@@ -13,6 +13,7 @@ def tracking_streamlit(input_video_name, output_video_name, model_weight: str = 
     model_path = PROJECT_ROOT/ "models" / "weights" / model_weight
     input_path = PROJECT_ROOT/ "input" / input_video_name
     output_path = PROJECT_ROOT / "output" / output_video_name
+    graph_path = PROJECT_ROOT / "output" / output_graph
 
     model = YOLO(model_path)
     cap = cv2.VideoCapture(input_path)
@@ -82,7 +83,31 @@ def tracking_streamlit(input_video_name, output_video_name, model_weight: str = 
     cap.release()
     out.release()
 
+    # --- Draw trajectory graph ---
+    fig, ax = plt.subplots(figsize=(8, 6))
 
+    # Plot trajectories
+    for tid, points in trajectories.items():
+        xs = [p[0] for p in points]
+        ys = [p[1] for p in points]
+        ax.plot(xs, ys, marker='o', label=f'Track id {tid}')
+
+    ax.invert_yaxis()  # match image coordinates (top-left origin)
+    ax.set_xlabel("X position (pixels)")
+    ax.set_ylabel("Y position (pixels)")
+    ax.set_title("Trajectory of Detected Balls")
+    ax.grid(True)
+    ax.legend()
+    plt.tight_layout()
+
+    # Save figure as PNG
+    fig.savefig(graph_path)
+    return fig
+    # Display in Streamlit
+    st.pyplot(fig)
+
+    # Close figure to free memory
+    plt.close(fig)
 
 def main():
     PROJECT_ROOT = Path(__file__).resolve().parent
@@ -106,16 +131,20 @@ def main():
         if st.button("Track Orange Ball", disabled=button_disabled):
             st.session_state.processing = True  # mark as processing
             temp_output_path = OUTPUT_DIR / "temp_result.mp4"
-            with st.spinner("Processing video..."):
+            #temp_output_graph = OUTPUT_DIR / "trajectory_graph.png"
+            with st.spinner("Video is being analyzed, please wait..."):
 
                 # Call your tracking function
-                tracking_streamlit(input_video_name="temp_video.mp4", 
-                                output_video_name="temp_result.mp4")
+                fig = tracking_streamlit(input_video_name="temp_video.mp4", 
+                                output_video_name="temp_result.mp4",
+                                output_graph="trajectory_graph.png")
             st.session_state.processing = False  # done processing
 
-            st.success("Tracking complete! Check temp_result.mp4")
+            st.success("Tracking complete! Check Graph and Video")
             # Show the processed video
+            st.pyplot(fig)
             st.video(str(temp_output_path))
+            
 
 if __name__ == "__main__":
     main()
