@@ -5,18 +5,19 @@ from sort_tracker import Sort  # Simple Online and Realtime Tracker
 from pathlib import Path
 import streamlit as st
 import matplotlib.pyplot as plt
-def tracking_streamlit(input_video_name: str, output_video_name: str, output_graph:str, model_weight: str = "best.pt"):
+import tempfile
+def tracking_streamlit(input_video_name: str, model_weight: str = "best.pt"):
     """
     !Orange ball trajectory detection and save the output video
     """
     PROJECT_ROOT = Path(__file__).resolve().parent
-    model_path = PROJECT_ROOT/ "models" / "weights" / model_weight
-    input_path = PROJECT_ROOT/ "input" / input_video_name
-    output_path = PROJECT_ROOT / "output" / output_video_name
-    graph_path = PROJECT_ROOT / "output" / output_graph
 
+    output_tempfile = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
+    output_path = output_tempfile.name
+
+    model_path = PROJECT_ROOT/ "models" / "weights" / model_weight
     model = YOLO(model_path)
-    cap = cv2.VideoCapture(input_path)
+    cap = cv2.VideoCapture(input_video_name)
 
     fps = cap.get(cv2.CAP_PROP_FPS)
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -101,8 +102,8 @@ def tracking_streamlit(input_video_name: str, output_video_name: str, output_gra
     plt.tight_layout()
 
     # Save figure as PNG
-    fig.savefig(graph_path)
-    return fig
+    #fig.savefig(graph_path)
+    return fig, output_path
     # Display in Streamlit
     st.pyplot(fig)
 
@@ -122,28 +123,26 @@ def main():
 
     if uploaded_file is not None:
         # Save uploaded file temporarily
-        temp_input_path = INPUT_DIR / "temp_video.mp4"
-        with open(temp_input_path, "wb") as f:
-            f.write(uploaded_file.read())
 
+        tfile = tempfile.NamedTemporaryFile(delete=False)
+        tfile.write(uploaded_file.read())
+        video_path = tfile.name
         # Disable button if processing
         button_disabled = st.session_state.processing
         if st.button("Track Orange Ball", disabled=button_disabled):
             st.session_state.processing = True  # mark as processing
-            temp_output_path = OUTPUT_DIR / "temp_result.mp4"
+            #temp_output_path = OUTPUT_DIR / "temp_result.mp4"
             #temp_output_graph = OUTPUT_DIR / "trajectory_graph.png"
             with st.spinner("Video is being analyzed, please wait..."):
 
                 # Call your tracking function
-                fig = tracking_streamlit(input_video_name="temp_video.mp4", 
-                                output_video_name="temp_result.mp4",
-                                output_graph="trajectory_graph.png")
+                fig, output_path = tracking_streamlit(input_video_name=video_path)
             st.session_state.processing = False  # done processing
 
             st.success("Tracking complete! Check Graph and Video")
             # Show the processed video
             st.pyplot(fig)
-            st.video(str(temp_output_path))
+            st.video(str(output_path))
             
 
 if __name__ == "__main__":
