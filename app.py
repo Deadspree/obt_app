@@ -6,6 +6,8 @@ from pathlib import Path
 import streamlit as st
 import matplotlib.pyplot as plt
 import tempfile
+
+
 def tracking_streamlit(input_video_name: str, model_weight: str = "best.pt"):
     """
     !Orange ball trajectory detection and save the output video
@@ -15,7 +17,7 @@ def tracking_streamlit(input_video_name: str, model_weight: str = "best.pt"):
     output_tempfile = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
     output_path = output_tempfile.name
 
-    model_path = PROJECT_ROOT/ "models" / "weights" / model_weight
+    model_path = PROJECT_ROOT / "models" / "weights" / model_weight
     model = YOLO(model_path)
     cap = cv2.VideoCapture(input_video_name)
 
@@ -23,7 +25,7 @@ def tracking_streamlit(input_video_name: str, model_weight: str = "best.pt"):
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-    fourcc = cv2.VideoWriter_fourcc(*'avc1')
+    fourcc = cv2.VideoWriter_fourcc(*"avc1")
     out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
     # 3️⃣ Initialize SORT tracker
@@ -58,7 +60,13 @@ def tracking_streamlit(input_video_name: str, model_weight: str = "best.pt"):
         # Draw tracks and store trajectories
         for track in tracks:
             x1, y1, x2, y2, track_id, _ = track
-            x1, y1, x2, y2, track_id = int(x1), int(y1), int(x2), int(y2), int(track_id)
+            x1, y1, x2, y2, track_id = (
+                int(x1),
+                int(y1),
+                int(x2),
+                int(y2),
+                int(track_id),
+            )
             x_center = int((x1 + x2) / 2)
             y_center = int((y1 + y2) / 2)
 
@@ -68,16 +76,24 @@ def tracking_streamlit(input_video_name: str, model_weight: str = "best.pt"):
             trajectories[track_id].append((x_center, y_center))
 
             # Draw bounding box
-            color = tuple(np.random.randint(0,255,3).tolist())  # unique random color per track
+            color = tuple(
+                np.random.randint(0, 255, 3).tolist()
+            )  # unique random color per track
             cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-            cv2.putText(frame, f"ID:{track_id}", (x1, y1-10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+            cv2.putText(
+                frame,
+                f"ID:{track_id}",
+                (x1, y1 - 10),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                color,
+                2,
+            )
 
         # Draw trajectory lines
         for tid, points in trajectories.items():
             for i in range(1, len(points)):
-                cv2.line(frame, points[i-1], points[i], (0,0,255), 2)
-        
+                cv2.line(frame, points[i - 1], points[i], (0, 0, 255), 2)
 
         out.write(frame)
 
@@ -91,7 +107,7 @@ def tracking_streamlit(input_video_name: str, model_weight: str = "best.pt"):
     for tid, points in trajectories.items():
         xs = [p[0] for p in points]
         ys = [p[1] for p in points]
-        ax.plot(xs, ys, marker='o', label=f'Track id {tid}')
+        ax.plot(xs, ys, marker="o", label=f"Track id {tid}")
 
     ax.invert_yaxis()  # match image coordinates (top-left origin)
     ax.set_xlabel("X position (pixels)")
@@ -102,7 +118,7 @@ def tracking_streamlit(input_video_name: str, model_weight: str = "best.pt"):
     plt.tight_layout()
 
     # Save figure as PNG
-    #fig.savefig(graph_path)
+    # fig.savefig(graph_path)
     return fig, output_path
     # Display in Streamlit
     st.pyplot(fig)
@@ -110,16 +126,16 @@ def tracking_streamlit(input_video_name: str, model_weight: str = "best.pt"):
     # Close figure to free memory
     plt.close(fig)
 
+
 def main():
-    PROJECT_ROOT = Path(__file__).resolve().parent
-    INPUT_DIR = PROJECT_ROOT / "input"
-    OUTPUT_DIR = PROJECT_ROOT / "output"
     st.title("Orange Ball Tracker")
     # Initialize session state
     if "processing" not in st.session_state:
         st.session_state.processing = False
         # Video upload
-    uploaded_file = st.file_uploader("Upload a video", type=["mp4", "mov", "avi"])
+    uploaded_file = st.file_uploader(
+        "Upload a video", type=["mp4", "mov", "avi"]
+    )
 
     if uploaded_file is not None:
         # Save uploaded file temporarily
@@ -131,20 +147,21 @@ def main():
         button_disabled = st.session_state.processing
         if st.button("Track Orange Ball", disabled=button_disabled):
             st.session_state.processing = True  # mark as processing
-            #temp_output_path = OUTPUT_DIR / "temp_result.mp4"
-            #temp_output_graph = OUTPUT_DIR / "trajectory_graph.png"
+            # temp_output_path = OUTPUT_DIR / "temp_result.mp4"
+            # temp_output_graph = OUTPUT_DIR / "trajectory_graph.png"
             with st.spinner("Video is being analyzed, please wait..."):
 
                 # Call your tracking function
-                fig, output_path = tracking_streamlit(input_video_name=video_path)
+                fig, output_path = tracking_streamlit(
+                    input_video_name=video_path
+                )
             st.session_state.processing = False  # done processing
 
             st.success("Tracking complete! Check Graph and Video")
             # Show the processed video
             st.pyplot(fig)
             st.video(str(output_path))
-            
+
 
 if __name__ == "__main__":
     main()
-    
