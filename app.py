@@ -160,7 +160,8 @@ def main():
             st.success("Tracking complete! Check Graph and Video")
             # Show the processed video
             st.pyplot(fig)
-            st.video(str(output_path))
+            video_file = open(output_path, "rb")
+            st.video(video_file.read())
 
 
 if __name__ == "__main__":
